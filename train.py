@@ -163,8 +163,8 @@ def main():
                 writer.add_scalar("psnr",float(total_psnr/eval_set_len),counter)
                 writer.add_scalar("lpips",float(total_lpips/eval_set_len),counter)
                 writer.add_scalar("mae",float(total_mae/eval_set_len),counter)
-
         logging.info('train-epoch %03d %f', epoch, np.average(losses))
+        print(np.average(losses))
 
 if __name__ == '__main__':
     main()
