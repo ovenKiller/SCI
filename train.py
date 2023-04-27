@@ -135,6 +135,7 @@ def main():
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 5)
             optimizer.step()
+            losses.append(float(loss.item()))
             if(float(loss.item())<min_loss):
                 min_loss = float(loss.item())
                 utils.save(model, os.path.join(model_path, 'best.pt'))
