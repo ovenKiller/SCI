@@ -132,12 +132,10 @@ class Network(nn.Module):
 
 class Finetunemodel(nn.Module):
 
-    def __init__(self, weights):
+    def __init__(self, base_weights):
         super(Finetunemodel, self).__init__()
         self.enhance = EnhanceNetwork(layers=1, channels=3)
         self._criterion = LossFunction()
-
-        base_weights = torch.load(weights)
         pretrained_dict = base_weights
         model_dict = self.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}

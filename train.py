@@ -15,7 +15,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 import pyiqa
 from model import *
-from multi_read_data import MemoryFriendlyLoader
+from multi_read_data import unpaired_data_loader
 from multi_read_data import paired_data_loader
 from datetime import datetime
 
@@ -33,6 +33,7 @@ parser.add_argument('--lr', type=float, default=0.0003, help='learning rate')
 parser.add_argument('--stage', type=int, default=3, help='epochs')
 parser.add_argument('--save', type=str, default='EXP/', help='location of the data corpus')
 parser.add_argument('--eval', type=str, default='data/eval', help='location of the data corpus')
+parser.add_argument('--train', type=str, default='data/train', help='location of the data corpus')
 
 args = parser.parse_args()
 
@@ -103,13 +104,14 @@ def main():
 
 
     train_low_data_names = 'Your train dataset'
-    TrainDataset = MemoryFriendlyLoader(img_dir=train_low_data_names, task='train')
+    train_dataset = unpaired_data_loader(args.train)
+    train_dataset.size = 256
 
 
 
     train_queue = torch.utils.data.DataLoader(
-        TrainDataset, batch_size=args.batch_size,
-        pin_memory=True, num_workers=0, shuffle=True)
+        train_dataset, batch_size=args.batch_size,
+        pin_memory=True, num_workers=0, shuffle=True,generator=torch.Generator(device='cuda'))
     train_loader_len = len(train_queue)
     total_step = 0
     min_loss = 100000.0
@@ -118,25 +120,29 @@ def main():
     ssim = pyiqa.create_metric('ssim').cuda()
     lpips = pyiqa.create_metric('lpips').cuda()
     mae = torch.nn.L1Loss().cuda()
-    eval_dataset = paired_data_loader(args.eval_data_path)
+    eval_dataset = paired_data_loader(args.eval)
     eval_set_len = len(eval_dataset)
-    eval_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=8, shuffle=True, num_workers=0)
+    eval_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=8, shuffle=True, num_workers=0,generator=torch.Generator(device='cuda'))
     for epoch in range(args.epochs):
         model.train()
         losses = []
-        for batch_idx, (input, _) in enumerate(train_queue):
+        for batch_idx, low_light_img in enumerate(train_queue):
             total_step += 1
-            input = Variable(input, requires_grad=False).cuda()
+            low_light_img = low_light_img.cuda()
 
             optimizer.zero_grad()
-            loss = model._loss(input)
+            loss = model._loss(low_light_img)
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 5)
             optimizer.step()
             if(float(loss.item())<min_loss):
                 min_loss = float(loss.item())
+                utils.save(model, os.path.join(model_path, 'best.pt'))
+
             if batch_idx % ((train_loader_len-1)//10)==0:
+                utils.save(model, os.path.join(model_path, 'latest.pt'))
                 counter+=1
+                test_model = Finetunemodel(model.state_dict())
                 total_ssim = 0.0
                 total_psnr = 0.0
                 total_lpips = 0.0
@@ -146,7 +152,7 @@ def main():
                     for data,label in eval_loader:
                         data = data.cuda()
                         label = label.cuda()
-                        _,enhanced_image = model(data)
+                        _,enhanced_image = test_model(data)
                         total_ssim += float(ssim(enhanced_image,label).sum())
                         total_psnr += float(psnr(enhanced_image,label).sum())
                         total_lpips += float(lpips(enhanced_image,label).sum())
@@ -156,9 +162,7 @@ def main():
                         writer.add_scalar("lpips",float(total_lpips/eval_set_len),counter)
                         writer.add_scalar("mae",float(total_mae/eval_set_len),counter)
 
-
         logging.info('train-epoch %03d %f', epoch, np.average(losses))
-        utils.save(model, os.path.join(model_path, 'weights_%d.pt' % epoch))
 
 if __name__ == '__main__':
     main()
