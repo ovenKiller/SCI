@@ -157,10 +157,11 @@ def main():
                         total_psnr += float(psnr(enhanced_image,label).sum())
                         total_lpips += float(lpips(enhanced_image,label).sum())
                         total_mae += float(mae(enhanced_image,label)*label.shape[0])
-                        writer.add_scalar("ssim",float(total_ssim/eval_set_len),counter)
-                        writer.add_scalar("psnr",float(total_psnr/eval_set_len),counter)
-                        writer.add_scalar("lpips",float(total_lpips/eval_set_len),counter)
-                        writer.add_scalar("mae",float(total_mae/eval_set_len),counter)
+                
+                writer.add_scalar("ssim",float(total_ssim/eval_set_len),counter)
+                writer.add_scalar("psnr",float(total_psnr/eval_set_len),counter)
+                writer.add_scalar("lpips",float(total_lpips/eval_set_len),counter)
+                writer.add_scalar("mae",float(total_mae/eval_set_len),counter)
 
         logging.info('train-epoch %03d %f', epoch, np.average(losses))
 
