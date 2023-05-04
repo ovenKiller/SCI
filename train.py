@@ -24,7 +24,7 @@ dir = os.path.join('runs',datetime.now().strftime("%Y%m%d%H%M%S"))
 writer = SummaryWriter(dir)
 
 parser = argparse.ArgumentParser("SCI")
-parser.add_argument('--batch_size', type=int, default=8, help='batch size')
+parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--cuda', default=True, type=bool, help='Use CUDA to train model')
 parser.add_argument('--gpu', type=str, default='0', help='gpu device id')
 parser.add_argument('--seed', type=int, default=2, help='random seed')
